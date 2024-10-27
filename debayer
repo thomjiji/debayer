@@ -11,10 +11,7 @@ import datetime
 import logging
 import subprocess
 import shlex
-import distutils.spawn
-import threading
 import concurrent.futures
-import multiprocessing
 
 
 # Set up logger # %(levelname)s %(asctime)s
@@ -130,7 +127,7 @@ DEFAULT_EXPOSURE = 4.0
     what is named in the default pp3 below.
     /usr/share/rawtherapee/iccprofiles/output/ACEScg.icc    (linux, BUILD_BUNDLE=OFF)
     <rt-install-folder>/iccprofiles/output/ACEScg.icc         (linux, BUILDR_BUNDLE=ON)
-    <rt-install-folder>\iccprofiles\output (windows)
+    <rt-install-folder>\\iccprofiles\\output (windows)
     /Library/ColorSync/Profiles/Displays (mac, untested)
     more info: https://rawpedia.rawtherapee.com/Color_Management#Adding_Custom_Working_Profiles
 
