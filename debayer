@@ -20,9 +20,10 @@ import multiprocessing
 # Set up logger # %(levelname)s %(asctime)s
 logging.basicConfig(
     level=logging.DEBUG,
-    format='%(message)s',
+    format="%(message)s",
     datefmt="%H:%M:%S",
-    handlers=[logging.StreamHandler(sys.stdout)])
+    handlers=[logging.StreamHandler(sys.stdout)],
+)
 log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
 # log.setLevel(logging.DEBUG)
@@ -32,9 +33,9 @@ log.setLevel(logging.INFO)
 #    CONFIGURATION
 
 DIR_PATH = os.path.dirname(os.path.realpath(__file__))
-PRESETS = os.path.join(DIR_PATH, 'presets')
+PRESETS = os.path.join(DIR_PATH, "presets")
 
-'''
+"""
 DEBAYER ENGINES
 
 -----------------------------------------
@@ -42,15 +43,15 @@ rt : Rawtherapee
     http://rawtherapee.com
     https://github.com/Beep6581/RawTherapee
 
-    Decent quality. RCD debayer. Good chromatic aberration removal. 
+    Decent quality. RCD debayer. Good chromatic aberration removal.
     Terrible posterization errors sometimes.
 
 -----------------------------------------
 art : Another Raw Therapee
     https://bitbucket.org/agriggio/art/wiki/Home
 
-    A fork of Rawtherapee that makes some big improvements in the image processing 
-    pipeline. No posterization artifacts when outputting linear. 
+    A fork of Rawtherapee that makes some big improvements in the image processing
+    pipeline. No posterization artifacts when outputting linear.
     Currently about 2x slower than RawTherapee and ART-cli crashes pretty often.
 
 -----------------------------------------
@@ -65,7 +66,7 @@ dcrcd : dcraw with RCD demoisaic
     https://github.com/LuisSR/RCD-Demosaicing
 
     Custom version of dcraw 9.27 compiled with RCD demoisaic algorithm.
-    Highest quality I've seen in open domain demoisaic algorithms. 
+    Highest quality I've seen in open domain demoisaic algorithms.
     Won't support newer raw formats like CR3 though :/
     Also about 4x slower to process than other options.
 
@@ -74,7 +75,7 @@ dt : Darktable
     https://www.darktable.org
     https://github.com/darktable-org/darktable
 
-    RCD debayer, floating point. good quality. 
+    RCD debayer, floating point. good quality.
 
 -----------------------------------------
 vkdt : vkdt
@@ -91,42 +92,41 @@ oiio : oiiotool
     Uses oiiotool directly for debayer. Requires that it is compiled with LibRaw support.
     Simple, good quality, fast. Single dependency. Good option.
 
-'''
+"""
 
 # Debayer engine options
-DEBAYER_ENGINES = ['rt', 'art', 'dc', 'dcrcd', 'dt', 'vkdt', 'oiio'] 
+DEBAYER_ENGINES = ["rt", "art", "dc", "dcrcd", "dt", "vkdt", "oiio"]
 # Debayer engine to use
-DEBAYER_ENGINE = 'rt'
+DEBAYER_ENGINE = "rt"
 
 # Binary executable locations
-OIIO_BIN    = '/usr/bin/oiiotool'
-RT_BIN      = '/opt/bin/rawtherapee-cli'
-ART_BIN     = '/usr/bin/ART-cli'
-DCRAW_BIN   = '/usr/bin/dcraw_emu'
-DCRCD_BIN   = '/opt/dcraw/dcraw-rcd'
-DT_BIN      = '/usr/bin/darktable-cli'
-VKDT_BIN    = '/opt/vkdt/vkdt/vkdt-cli'
+OIIO_BIN = "/usr/bin/oiiotool"
+RT_BIN = "/opt/bin/rawtherapee-cli"
+ART_BIN = "/usr/bin/ART-cli"
+DCRAW_BIN = "/usr/bin/dcraw_emu"
+DCRCD_BIN = "/opt/dcraw/dcraw-rcd"
+DT_BIN = "/usr/bin/darktable-cli"
+VKDT_BIN = "/opt/vkdt/vkdt/vkdt-cli"
 
 # Cache directory for temp files
-CACHE_DIR = '/var/tmp/debayer'
+CACHE_DIR = "/var/tmp/debayer"
 
 # Number of simultaneous jobs
 THREADS = 2
 
 # exr file compression: "none", "zip", "rle", "zips", "piz", "pxr24", "b44", "b44a", "dwaa:45", "dwab:45"
-EXR_COMPRESSION = 'dwaa:15'
+EXR_COMPRESSION = "dwaa:15"
 
 # Default raw to scene-linear exposure
 DEFAULT_EXPOSURE = 4.0
 
 
-
 # Default profile locations
-''' Default RawTherapee pp3 config
+""" Default RawTherapee pp3 config
     Requires that this icc profile for linear ACEScg output
     https://github.com/ellelstone/elles_icc_profiles/blob/master/profiles/ACEScg-elle-V4-g10.icc
 
-    is installed in the iccprofiles path. It MUST BE NAMED 'ACEScg.icc' because this is 
+    is installed in the iccprofiles path. It MUST BE NAMED 'ACEScg.icc' because this is
     what is named in the default pp3 below.
     /usr/share/rawtherapee/iccprofiles/output/ACEScg.icc    (linux, BUILD_BUNDLE=OFF)
     <rt-install-folder>/iccprofiles/output/ACEScg.icc         (linux, BUILDR_BUNDLE=ON)
@@ -140,131 +140,189 @@ DEFAULT_EXPOSURE = 4.0
     This icc profile shenanigans are to work around a posterization bug in Rawtherapee 5.8 as described
     https://github.com/Beep6581/RawTherapee/issues/6378
 
-    If you are using the latest nightly build the custom icc profile is not necessary, you can set the 
+    If you are using the latest nightly build the custom icc profile is not necessary, you can set the
     Tone response curve to 1.0, and the output to the built-in AP1 output profile.
-'''
-RT_DEFAULT_PROFILE = os.path.join(PRESETS, 'acescg_wb-day.pp3')
+"""
+RT_DEFAULT_PROFILE = os.path.join(PRESETS, "acescg_wb-day.pp3")
 
 # No icc profile required.
-ART_DEFAULT_PROFILE = os.path.join(PRESETS, 'acescg_wb-day.arp')
+ART_DEFAULT_PROFILE = os.path.join(PRESETS, "acescg_wb-day.arp")
 
-''' Default darktable xmp config to use
-    A couple of tips to make these... 
+""" Default darktable xmp config to use
+    A couple of tips to make these...
       1. Save a dtstyle or preset you want to use (preferably outputting scene-linear)
       2. Apply the preset to an image
       3. Open the xmp file associated with that image
-      4. Remove the <rdf:li      darktable:num="0"      darktable:operation="rawprepare" section. 
+      4. Remove the <rdf:li      darktable:num="0"      darktable:operation="rawprepare" section.
          This will fuck up raw levels between different raw types if not removed.
       5. Get rid of tags and other shit you don't want applied to all your images
-      6. If you can't update the settings of one <rdf:li section, the parameter hash changes, 
+      6. If you can't update the settings of one <rdf:li section, the parameter hash changes,
          and you need to update the darktable:history_current_hash> line also
       7. Why the fuck is this process such a mess?
-'''
+"""
 # DT_DEFAULT_PROFILE = os.path.join(PRESETS, 'lin_bt2020_wb_as-shot.xmp') # with as-shot whitebalance
-DT_DEFAULT_PROFILE = os.path.join(PRESETS, 'lin_bt2020_wb_day.xmp') # with manual daylight whitebalance
-VKDT_PRESET = os.path.join(PRESETS, 'lin_rec2020_wb_day.cfg')
+DT_DEFAULT_PROFILE = os.path.join(
+    PRESETS, "lin_bt2020_wb_day.xmp"
+)  # with manual daylight whitebalance
+VKDT_PRESET = os.path.join(PRESETS, "lin_rec2020_wb_day.cfg")
 
 
 # Override oiiotool resize filter algorithm, if RESIZE_FILTER != None
 # # "box", "triangle", "gaussian", "sharp-gaussian", "catmull-rom", "blackman-harris", "sinc", "lanczos3", "mitchell", "bspline", "cubic", "keys", "simon", "rifman"
-RESIZE_FILTER = 'blackman-harris'
+RESIZE_FILTER = "blackman-harris"
 
 # Supported raw file extensions (uppercase automatically added)
-RAW_FILE_FORMATS = ["crw", "cr2", "cr3", "dng", "nef", "nrw", "arw", "bay", 
-    "cap", "iiq", "eip", "dcs", "dcr", "drf", "kdc", "erf", "fff", "mef", 
-    "mdc", "mos", "mrw", "orf", "pef", "ptx", "raf", "raw", "rw2", "rwl", "srw", "x3f"]
+RAW_FILE_FORMATS = [
+    "crw",
+    "cr2",
+    "cr3",
+    "dng",
+    "nef",
+    "nrw",
+    "arw",
+    "bay",
+    "cap",
+    "iiq",
+    "eip",
+    "dcs",
+    "dcr",
+    "drf",
+    "kdc",
+    "erf",
+    "fff",
+    "mef",
+    "mdc",
+    "mos",
+    "mrw",
+    "orf",
+    "pef",
+    "ptx",
+    "raf",
+    "raw",
+    "rw2",
+    "rwl",
+    "srw",
+    "x3f",
+]
 
 # 3x3 color gamut conversion matrices
 # D65-aligned XYZ to ACEScg with CAT02 CAT. Works with dcraw
-mtx_XYZ_to_ACEScg = '1.65885437,-0.31185693,-0.24315603,-0.66228336,1.61220002,0.01585913,0.01148057,-0.00923633,0.91668653'
+mtx_XYZ_to_ACEScg = "1.65885437,-0.31185693,-0.24315603,-0.66228336,1.61220002,0.01585913,0.01148057,-0.00923633,0.91668653"
 # ACES AP0 to ACES AP1 conversion. Works with dcraw
-mtx_ACES_to_ACEScg = '1.45143926,-0.23651077,-0.21492854,-0.07655376,1.17622995,-0.09967593,0.00831615,-0.00603245,0.99771643'
+mtx_ACES_to_ACEScg = "1.45143926,-0.23651077,-0.21492854,-0.07655376,1.17622995,-0.09967593,0.00831615,-0.00603245,0.99771643"
 # Rec.2020 to ACES AP1 conversion. Works with Darktable and vkdt
-mtx_Rec2020_to_ACEScg = '0.97469574,0.02163394,0.00367035,0.00167857,0.99773639,0.00058547,0.00488625,0.02113193,0.97398192'
+mtx_Rec2020_to_ACEScg = "0.97469574,0.02163394,0.00367035,0.00167857,0.99773639,0.00058547,0.00488625,0.02113193,0.97398192"
 
 
-
-class Debayer():
-
+class Debayer:
     def __init__(self):
-        '''
+        """
         Validate everything necessary to begin work:
             - Gather settings from the config file
             - Gather commandline arguments
             - Verify everything we need exists
             - Gather all inpput images
-        '''
+        """
 
         # Get commandline arguments
         parser = argparse.ArgumentParser(
-                            description="Debayer is a commandline tool to convert camera raw images into scene-linear exr.")
-        
-        parser.add_argument("input_paths",
-                            help="Source(s) to process. Can be one or more images or directories containing images.",
-                            type=str,
-                            action='store',
-                            nargs='+')
-        
-        parser.add_argument("-o", "--output",
-                            help="Output directory. If not specified, the current directory will be used.",
-                            required=False)
-        
-        parser.add_argument("-w", "--overwrite",
-                            action="store_true",
-                            help="Overwrite existing output files.",
-                            required=False)
-        
-        parser.add_argument("-p", "--profile",
-                            help="Optional override to specify a custom profile to use.\n"
-                                "If none, the default config file will be used.\n"
-                                "Could be a pp3 file for rawtherapee, xmp for darktable, or cfg for vkdt.",
-                            required=False)
-        
-        parser.add_argument("-en", "--engine",
-                            help="Debayer engine to use:\n"
-                                "If none, the DEBAYER_ENGINE variable in will be used.\n"
-                                "one of: 'rt', 'art', 'dc', 'dcrcd', 'dt', 'vkdt', 'oiio'",
-                            required=False)
+            description="Debayer is a commandline tool to convert camera raw images into scene-linear exr."
+        )
 
-        parser.add_argument("-ca", "--aberration",
-                            help="Remove chromatic aberration (rawtherapee or ART only)\n",
-                            action="store_true",
-                            required=False)
-        
-        parser.add_argument("-r", "--resize",
-                            help="Apply a resize to the output image. Aspect ratio is not preserved if both width and height are specified.\n"
-                                "<width>x<height>\n"
-                                "Or preserve aspect ratio if w or h = 0: e.g. \"1920x0\"\n"
-                                "Can also be a percentage like \"50%%\""
-                                "(For Magic Lantern 1x3 anamorphic) 1920x2340 -> 5760x2340 -> 2880x1170\n"
-                                "(ML 1x3 2.35) - 1808x2300 -> (unsqueeze) 5424x2300 -> (0.5) 2712x1150\n"
-                                "Or 1280x2160 (1x3) -> 3840x2160 -> 2560x1440 -> 1920x1080\n",
-                            required=False)
-        
-        parser.add_argument("-e", "--exposure",
-                            type=float,
-                            help="Raw to scene-linear exposure adjustment. Default is 4.0",
-                            required=False)
+        parser.add_argument(
+            "input_paths",
+            help="Source(s) to process. Can be one or more images or directories containing images.",
+            type=str,
+            action="store",
+            nargs="+",
+        )
 
-        parser.add_argument("-j", "--jobs",
-                                    type=int,
-                                    help="Number of simultaneous jobs.",
-                                    required=False)
-        
-        parser.add_argument("-f", "--filter",
-                            help="Include only files that match regex. \n"
-                                 "Can be comma separated list.",
-                            required=False)
+        parser.add_argument(
+            "-o",
+            "--output",
+            help="Output directory. If not specified, the current directory will be used.",
+            required=False,
+        )
 
-        
+        parser.add_argument(
+            "-w",
+            "--overwrite",
+            action="store_true",
+            help="Overwrite existing output files.",
+            required=False,
+        )
+
+        parser.add_argument(
+            "-p",
+            "--profile",
+            help="Optional override to specify a custom profile to use.\n"
+            "If none, the default config file will be used.\n"
+            "Could be a pp3 file for rawtherapee, xmp for darktable, or cfg for vkdt.",
+            required=False,
+        )
+
+        parser.add_argument(
+            "-en",
+            "--engine",
+            help="Debayer engine to use:\n"
+            "If none, the DEBAYER_ENGINE variable in will be used.\n"
+            "one of: 'rt', 'art', 'dc', 'dcrcd', 'dt', 'vkdt', 'oiio'",
+            required=False,
+        )
+
+        parser.add_argument(
+            "-ca",
+            "--aberration",
+            help="Remove chromatic aberration (rawtherapee or ART only)\n",
+            action="store_true",
+            required=False,
+        )
+
+        parser.add_argument(
+            "-r",
+            "--resize",
+            help="Apply a resize to the output image. Aspect ratio is not preserved if both width and height are specified.\n"
+            "<width>x<height>\n"
+            'Or preserve aspect ratio if w or h = 0: e.g. "1920x0"\n'
+            'Can also be a percentage like "50%%"'
+            "(For Magic Lantern 1x3 anamorphic) 1920x2340 -> 5760x2340 -> 2880x1170\n"
+            "(ML 1x3 2.35) - 1808x2300 -> (unsqueeze) 5424x2300 -> (0.5) 2712x1150\n"
+            "Or 1280x2160 (1x3) -> 3840x2160 -> 2560x1440 -> 1920x1080\n",
+            required=False,
+        )
+
+        parser.add_argument(
+            "-e",
+            "--exposure",
+            type=float,
+            help="Raw to scene-linear exposure adjustment. Default is 4.0",
+            required=False,
+        )
+
+        parser.add_argument(
+            "-j",
+            "--jobs",
+            type=int,
+            help="Number of simultaneous jobs.",
+            required=False,
+        )
+
+        parser.add_argument(
+            "-f",
+            "--filter",
+            help="Include only files that match regex. \n"
+            "Can be comma separated list.",
+            required=False,
+        )
+
         # Show help if no args.
-        if len(sys.argv)==1:
+        if len(sys.argv) == 1:
             parser.print_help()
             return None
 
         # All recognized file extensions
         self.raw_formats = RAW_FILE_FORMATS + [r.upper() for r in RAW_FILE_FORMATS]
-        
+
         # list to hold inputs which are directories
         self.input_dirs = list()
         # list to hold raw images to process
@@ -272,7 +330,6 @@ class Debayer():
 
         args = parser.parse_args()
 
-        
         # Validate bin paths
         self.oiio_bin = OIIO_BIN
         if not os.path.exists(self.oiio_bin):
@@ -280,7 +337,7 @@ class Debayer():
             return
 
         self.profile = args.profile
-        
+
         # Use provided profile instead of defaults. No error checking!
         if self.profile:
             self.profile = os.path.expanduser(self.profile)
@@ -289,56 +346,67 @@ class Debayer():
                 log.error("Error: Specified profile does not exist.")
                 return
 
-        
         # Debayer engine setup
-        self.engine_bin = ''
+        self.engine_bin = ""
 
         self.engine = args.engine
         if not self.engine:
             self.engine = DEBAYER_ENGINE
         else:
             if self.engine not in DEBAYER_ENGINES:
-                log.error('Error: Invalid debayer engine specified.')
+                log.error("Error: Invalid debayer engine specified.")
                 return
 
-        if self.engine == 'rt':
+        if self.engine == "rt":
             self.engine_bin = RT_BIN
             if not self.profile:
                 self.profile = RT_DEFAULT_PROFILE
-        elif self.engine == 'art':
+        elif self.engine == "art":
             self.engine_bin = ART_BIN
             if not self.profile:
                 self.profile = ART_DEFAULT_PROFILE
-        elif self.engine == 'dc':
+        elif self.engine == "dc":
             self.engine_bin = DCRAW_BIN
-        elif self.engine == 'dcrcd':
+        elif self.engine == "dcrcd":
             self.engine_bin = DCRCD_BIN
-        elif self.engine == 'dt':
+        elif self.engine == "dt":
             self.engine_bin = DT_BIN
             if not self.profile:
                 self.profile = DT_DEFAULT_PROFILE
-        elif self.engine == 'vkdt':
+        elif self.engine == "vkdt":
             self.engine_bin = VKDT_BIN
             if not self.profile:
                 self.profile = VKDT_PRESET
-        elif self.engine == 'oiio':
+        elif self.engine == "oiio":
             self.engine_bin = OIIO_BIN
         else:
-            log.error('Error: No debayer engine selected')
-        
+            log.error("Error: No debayer engine selected")
+
         if not os.path.exists(self.engine_bin):
-            log.error("Error: could not locate debayer engine binary. Please check configuration.")
+            log.error(
+                "Error: could not locate debayer engine binary. Please check configuration."
+            )
             return
 
-        # Chromatic aberration 
+        # Chromatic aberration
         self.aberration = args.aberration
         if self.aberration:
-            if 'rt' in self.engine:
+            if "rt" in self.engine:
                 # Copy profile to temp dir
-                tmp_profile = os.path.join(self.cache_dir, os.path.basename(self.profile))
-                log.debug("Chromatic Aberration specified: Creating temp profile: {0}".format(tmp_profile))
+                tmp_profile = os.path.join(
+                    self.cache_dir, os.path.basename(self.profile)
+                )
+                log.debug(
+                    "Chromatic Aberration specified: Creating temp profile: {0}".format(
+                        tmp_profile
+                    )
+                )
                 shutil.copyfile(self.profile, tmp_profile)
-                sed_proc = subprocess.Popen(shlex.split("sed -i -e 's/CA=false/CA=true/' {0}".format(tmp_profile)))
+                sed_proc = subprocess.Popen(
+                    shlex.split(
+                        "sed -i -e 's/CA=false/CA=true/' {0}".format(tmp_profile)
+                    )
+                )
                 result, error = sed_proc.communicate()
                 if not error:
                     self.profile = tmp_profile
@@ -353,19 +421,19 @@ class Debayer():
         self.exposure = args.exposure
         if not self.exposure:
             self.exposure = DEFAULT_EXPOSURE
-        
-        if 'rt' in self.engine or self.engine == 'dc':
+
+        if "rt" in self.engine or self.engine == "dc":
             # For rawtherapee, assumes pp3 profile which exposes -1 stop for highlight reconstruction
             # For dcraw_emu, we use -H 2 : blend mode for highlight reconstruction. This mode exposes down the output by 1 stop, or *= 0.5
             self.exposure *= 2
-        elif self.engine == 'oiio':
+        elif self.engine == "oiio":
             # oiiotool divides by ~2.25 when HighlightMode = 2
             self.exposure *= 2.25
 
         self.threads = args.jobs
         if not self.threads:
             self.threads = THREADS
-        
+
         # Create temp directory
         self.cache_dir = CACHE_DIR
         if not os.path.isdir(self.cache_dir):
@@ -374,12 +442,12 @@ class Debayer():
         # Search filter String
         if args.filter:
             if "," in args.filter:
-                filter_items = [i.strip for i in args.filter.rsplit(',')]
+                filter_items = [i.strip for i in args.filter.rsplit(",")]
             else:
                 filter_items = [args.filter.strip()]
         else:
             filter_items = list()
-        
+
         self.filter_patterns = list()
         if filter_items:
             for pattern in filter_items:
@@ -396,7 +464,7 @@ class Debayer():
                 elif os.path.isfile(input_path):
                     self.add_file(input_path)
         if not self.raw_images and not self.input_dirs:
-            log.error('Error: No inputs specified.')
+            log.error("Error: No inputs specified.")
             return
 
         # Output directory
@@ -408,25 +476,25 @@ class Debayer():
                 os.makedirs(self.dst)
         else:
             self.dst = os.getcwd()
-    
 
         # process all raw images in input
         self.raw_images.sort()
         self.input_dir = None
-        
+
         if self.threads > 1:
             # process with multi-threading
-            with concurrent.futures.ThreadPoolExecutor(max_workers=self.threads) as executor:
+            with concurrent.futures.ThreadPoolExecutor(
+                max_workers=self.threads
+            ) as executor:
                 executor.map(self.process_image, self.raw_images)
         else:
             for raw_image in self.raw_images:
                 self.process_image(raw_image)
 
-
         # Process input_dirs
         for self.input_dir in self.input_dirs:
             self.raw_images = list()
-            
+
             # Gather all raw images in input_dir
             for root, directories, filenames in os.walk(self.input_dir):
                 for filename in filenames:
@@ -437,21 +505,21 @@ class Debayer():
 
             if self.threads > 1:
                 # process with multi-threading
-                with concurrent.futures.ThreadPoolExecutor(max_workers=self.threads) as executor:
+                with concurrent.futures.ThreadPoolExecutor(
+                    max_workers=self.threads
+                ) as executor:
                     executor.map(self.process_image, self.raw_images)
             else:
                 for raw_image in self.raw_images:
                     self.process_image(raw_image)
 
-
-
     def add_file(self, fpath):
-        ''' Validate that input path is a valid raw image, apply filter rules
-            :param fpath: string of file path to validate.
-        ''' 
+        """Validate that input path is a valid raw image, apply filter rules
+        :param fpath: string of file path to validate.
+        """
         if os.path.isfile(fpath):
             if "." in fpath:
-                fpath_ext = fpath.split('.')[-1]
+                fpath_ext = fpath.split(".")[-1]
             if fpath_ext in self.raw_formats:
                 # filter based on filter_list if it exists
                 if self.filter_patterns:
@@ -466,12 +534,10 @@ class Debayer():
                     if fpath not in self.raw_images:
                         self.raw_images.append(fpath)
 
-
-
     def process_image(self, imgpath, i=0):
-        ''' Debayer target raw image to exr
-            :param imgpath: string - path of raw image to process
-        '''
+        """Debayer target raw image to exr
+        :param imgpath: string - path of raw image to process
+        """
         start_time = time.time()
         # If processing a folder full of images,
         # all directories below self.input_dir will be reconstructed in out_dir
@@ -487,28 +553,28 @@ class Debayer():
         img_dir, img_name = os.path.split(imgpath)
         img_basename, img_ext = os.path.splitext(img_name)
 
-        tmp_ext = '.tif'
+        tmp_ext = ".tif"
         # darktable outputs pfm quickest. exr out is slow, full 32 bit float, and limited compression options anyway.
         # vkdt also outputs pfm
-        if 'dt' in self.engine:
-            tmp_ext = '.pfm'
+        if "dt" in self.engine:
+            tmp_ext = ".pfm"
 
         tmp_dstpath = os.path.join(self.cache_dir, img_basename + tmp_ext)
-        
+
         if not os.path.isdir(out_dir):
             os.makedirs(out_dir)
-        dstpath = os.path.join(out_dir, img_basename + '.exr')
+        dstpath = os.path.join(out_dir, img_basename + ".exr")
 
         if not self.overwrite:
             # check if output file exists already
             if os.path.exists(dstpath):
-                log.error('Skipping existing output image:\n\t{0}'.format(dstpath))
+                log.error("Skipping existing output image:\n\t{0}".format(dstpath))
                 return
 
         gamut_conversion_matrix = None
 
         # dcraw_emu debayer
-        if self.engine == 'dc':
+        if self.engine == "dc":
             gamut_conversion_matrix = mtx_XYZ_to_ACEScg
             # whitebalance
             #   https://photography-on-the.net/forum/showthread.php?t=740954
@@ -525,31 +591,35 @@ class Debayer():
                 imgpath,
             )
             with open(tmp_dstpath, "w") as output_file:
-                dcraw_proc = subprocess.Popen(shlex.split(dcraw_cmd), stdout=output_file)
+                dcraw_proc = subprocess.Popen(
+                    shlex.split(dcraw_cmd), stdout=output_file
+                )
             result, error = dcraw_proc.communicate()
             if error:
                 log.error("Error Processing Result: " + error)
 
         # dcraw RCD debayer
-        if self.engine == 'dcrcd':
+        if self.engine == "dcrcd":
             gamut_conversion_matrix = mtx_XYZ_to_ACEScg
             dcraw_cmd = '"{0}" -4 -T -H 0 -o 5 -q 4 -c "{1}"'.format(
                 self.engine_bin,
                 imgpath,
             )
             with open(tmp_dstpath, "w") as output_file:
-                dcraw_proc = subprocess.Popen(shlex.split(dcraw_cmd), stdout=output_file)
+                dcraw_proc = subprocess.Popen(
+                    shlex.split(dcraw_cmd), stdout=output_file
+                )
             result, error = dcraw_proc.communicate()
             if error:
                 log.error("Error Processing Result: " + error)
-        
+
         # ART or rawtherapee debayer
-        elif 'rt' in self.engine:
+        elif "rt" in self.engine:
             # note: removing -f because there is a bug in ART-cli where it outputs 900px width if -f is enabled.
-            gamut_conversion_matrix = None # Assume output is ACEScg
-            rt_params = '-b16 -Y -q -t'
-            if self.engine == 'rt':
-                rt_params += ' -f'
+            gamut_conversion_matrix = None  # Assume output is ACEScg
+            rt_params = "-b16 -Y -q -t"
+            if self.engine == "rt":
+                rt_params += " -f"
             rt_cmd = '{0} -o "{1}" -p "{2}" {3} -c "{4}"'.format(
                 self.engine_bin,
                 self.cache_dir,
@@ -559,17 +629,17 @@ class Debayer():
             )
             log.debug(rt_cmd)
             rt_proc = subprocess.Popen(
-                shlex.split(rt_cmd), 
-                stdin=subprocess.PIPE, 
+                shlex.split(rt_cmd),
+                stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
-                stderr=open(os.devnull, 'wb'),
+                stderr=open(os.devnull, "wb"),
             )
             result, error = rt_proc.communicate()
             if error:
                 log.error("Error Processing Result: " + error)
 
         # darktable debayer
-        elif self.engine == 'dt':
+        elif self.engine == "dt":
             gamut_conversion_matrix = mtx_Rec2020_to_ACEScg
             # need workaround to make darktable-cli run independent of database lock
             # https://photo.stackexchange.com/questions/105969/darktable-cli-fails-because-of-locked-database-file
@@ -578,8 +648,8 @@ class Debayer():
             # dt_configdir = os.path.join(self.cache_dir, rand_str)
             # dt_cmd = '{0} "{1}" "{2}" "{3}" --core --library ":memory:" --configdir "{4}"'.format(
             # then would have to copy data.db containing dtstyle... and... use --style?? fuck no
-            
-            # nevermind we can ignore the whole stupid dtstyle presets shenanigans. 
+
+            # nevermind we can ignore the whole stupid dtstyle presets shenanigans.
             # actually no because xmp doesn't reliably capture the settings. xmp for cr2 doesn't work with dng and vice-versa
             # actually yes, we just have to delete the "rawprepare" operation from the xmp file. fucking shit christ
             dt_cmd = '{0} "{1}" "{2}" "{3}" --apply-custom-presets 0'.format(
@@ -590,57 +660,57 @@ class Debayer():
             )
             log.debug(dt_cmd)
             dt_proc = subprocess.Popen(
-                shlex.split(dt_cmd), 
-                stdin=subprocess.PIPE, 
+                shlex.split(dt_cmd),
+                stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
-                stderr=open(os.devnull, 'wb')
+                stderr=open(os.devnull, "wb"),
             )
             result, error = dt_proc.communicate()
 
             # # cleanup tmp config dir
             # shutil.rmtree(dt_configdir, ignore_errors=True)
-                
+
             if error:
                 log.error("Error Processing Result: " + error)
 
         # vkdt debayer
-        elif self.engine == 'vkdt':
+        elif self.engine == "vkdt":
             gamut_conversion_matrix = mtx_Rec2020_to_ACEScg
             vkdt_cmd = '{0} -g "{1}" --format o-pfm --filename "{2}" --config param:i-raw:01:filename:"{3}"'.format(
                 self.engine_bin,
                 self.profile,
-                os.path.splitext(tmp_dstpath)[0], # .pfm added automatically
-                imgpath)
+                os.path.splitext(tmp_dstpath)[0],  # .pfm added automatically
+                imgpath,
+            )
             log.debug(vkdt_cmd)
-            dt_proc = subprocess.Popen(shlex.split(vkdt_cmd), 
-                stdin=subprocess.PIPE, 
+            dt_proc = subprocess.Popen(
+                shlex.split(vkdt_cmd),
+                stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
-                stderr=open(os.devnull, 'wb'),
+                stderr=open(os.devnull, "wb"),
             )
             result, error = dt_proc.communicate()
-            
+
             if error:
                 log.error("Error Processing Result: " + error)
-        
 
-        
         # oiio command setup
         oiio_cmd = '"{0}" -v'.format(self.oiio_bin)
 
         # use oiio for debayer and conversion to exr (uses libraw internally)
-        if self.engine == 'oiio':
+        if self.engine == "oiio":
             gamut_conversion_matrix = mtx_XYZ_to_ACEScg
             oiio_cmd += ' "{0}"'.format(imgpath)
             # https://openimageio.readthedocs.io/en/latest/builtinplugins.html#raw-digital-camera-files
             # AAHD or DHT demoisaic are the best. DCB would be good, but -dcbe option not available in oiiotool.
             # As far as I can tell, balance_clamped does nothing.
             oiio_cmd += (
-                ' -iconfig raw:ColorSpace XYZ'
-                ' -iconfig raw:Demosaic AAHD'
-                ' -iconfig raw:use_camera_wb 0' # Forces D65 whitebalance... I think?
-                # ' -iconfig raw:user_mul 2.132483,1.0,1.0,1.480864' # can do custom wb as well but it's unclear how this relates 
-                ' -iconfig raw:use_camera_matrix 3'
-                ' -iconfig raw:HighlightMode 2'
+                " -iconfig raw:ColorSpace XYZ"
+                " -iconfig raw:Demosaic AAHD"
+                " -iconfig raw:use_camera_wb 0"  # Forces D65 whitebalance... I think?
+                # ' -iconfig raw:user_mul 2.132483,1.0,1.0,1.480864' # can do custom wb as well but it's unclear how this relates
+                " -iconfig raw:use_camera_matrix 3"
+                " -iconfig raw:HighlightMode 2"
                 # ' -iconfig raw:balance_clamped'
                 ' -i "{0}"'
             ).format(imgpath)
@@ -649,54 +719,55 @@ class Debayer():
             # make sure the temp image exists
             # if debayer engine segfaulted we will retry 3 times hoping it works :/
             if not os.path.isfile(tmp_dstpath):
-                log.error('Error: TMP image did not generate:\n\t{0}'.format(tmp_dstpath))
+                log.error(
+                    "Error: TMP image did not generate:\n\t{0}".format(tmp_dstpath)
+                )
                 if i < 3:
-                    log.error('Retry {0}...'.format(i+1))
-                    self.process_image(imgpath, i=i+1)
+                    log.error("Retry {0}...".format(i + 1))
+                    self.process_image(imgpath, i=i + 1)
                 else:
-                    log.error('Error: Could not process:\n\t{0}'.format(imgpath))
+                    log.error("Error: Could not process:\n\t{0}".format(imgpath))
                 return
 
-            oiio_cmd += ' {0}'.format(tmp_dstpath)
-        
+            oiio_cmd += " {0}".format(tmp_dstpath)
+
         # just use oiiotool to convert tmp_dstpath to output exr
         if self.resize:
-            oiio_cmd += ' --resize {0}'.format(self.resize)
+            oiio_cmd += " --resize {0}".format(self.resize)
             if self.resize_filter:
-                oiio_cmd += ':filter={0}'.format(self.resize_filter)
+                oiio_cmd += ":filter={0}".format(self.resize_filter)
 
-        if self.engine == 'vkdt':
+        if self.engine == "vkdt":
             # vkdt always outputs upside down images! :D
-            oiio_cmd += ' --flip'
+            oiio_cmd += " --flip"
 
-        oiio_cmd += ' -d half'
-        oiio_cmd += ' --mulc {0}'.format(self.exposure)
+        oiio_cmd += " -d half"
+        oiio_cmd += " --mulc {0}".format(self.exposure)
 
         if gamut_conversion_matrix:
-            oiio_cmd += ' -ccmatrix:transpose=1 {0}'.format(gamut_conversion_matrix)
+            oiio_cmd += " -ccmatrix:transpose=1 {0}".format(gamut_conversion_matrix)
 
-        oiio_cmd += ' --compression {0}'.format(self.compression)
+        oiio_cmd += " --compression {0}".format(self.compression)
         oiio_cmd += ' -o "{0}"'.format(dstpath)
 
         log.debug(oiio_cmd)
         oiio_proc = subprocess.Popen(
-            shlex.split(oiio_cmd),
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE)
+            shlex.split(oiio_cmd), stdin=subprocess.PIPE, stdout=subprocess.PIPE
+        )
         result, error = oiio_proc.communicate()
-        
+
         # delete temp image
         if os.path.exists(tmp_dstpath):
             os.remove(tmp_dstpath)
 
-        log.info('Processing:\n\t{0}\n->\t{1}\n{2}'.format(
-            imgpath,
-            dstpath,
-            datetime.timedelta(seconds = time.time() - start_time)
-            ))
-        
-        return
-    
+        log.info(
+            "Processing:\n\t{0}\n->\t{1}\n{2}".format(
+                imgpath, dstpath, datetime.timedelta(seconds=time.time() - start_time)
+            )
+        )
 
-if __name__=="__main__":
+        return
+
+
+if __name__ == "__main__":
     debayer = Debayer()
