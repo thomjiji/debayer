@@ -1,18 +1,17 @@
 #!/usr/bin/env python3
 from __future__ import with_statement
 
-import os
-import sys
 import argparse
-import re
-import shutil
-import time
+import concurrent.futures
 import datetime
 import logging
-import subprocess
+import os
+import re
 import shlex
-import concurrent.futures
-
+import shutil
+import subprocess
+import sys
+import time
 
 # Set up logger # %(levelname)s %(asctime)s
 logging.basicConfig(
@@ -97,10 +96,10 @@ DEBAYER_ENGINES = ["rt", "art", "dc", "dcrcd", "dt", "vkdt", "oiio"]
 DEBAYER_ENGINE = "rt"
 
 # Binary executable locations
-OIIO_BIN = "/usr/bin/oiiotool"
+OIIO_BIN = "/opt/homebrew/bin/oiiotool"
 RT_BIN = "/opt/bin/rawtherapee-cli"
 ART_BIN = "/usr/bin/ART-cli"
-DCRAW_BIN = "/usr/bin/dcraw_emu"
+DCRAW_BIN = "/opt/homebrew/bin/dcraw_emu"
 DCRCD_BIN = "/opt/dcraw/dcraw-rcd"
 DT_BIN = "/usr/bin/darktable-cli"
 VKDT_BIN = "/opt/vkdt/vkdt/vkdt-cli"
@@ -109,7 +108,7 @@ VKDT_BIN = "/opt/vkdt/vkdt/vkdt-cli"
 CACHE_DIR = "/var/tmp/debayer"
 
 # Number of simultaneous jobs
-THREADS = 2
+THREADS = 5
 
 # exr file compression: "none", "zip", "rle", "zips", "piz", "pxr24", "b44", "b44a", "dwaa:45", "dwab:45"
 EXR_COMPRESSION = "dwaa:15"
@@ -593,7 +592,7 @@ class Debayer:
                 )
             result, error = dcraw_proc.communicate()
             if error:
-                log.error("Error Processing Result: " + error)
+                log.error("Error Processing Result: {error}")
 
         # dcraw RCD debayer
         if self.engine == "dcrcd":
@@ -608,7 +607,7 @@ class Debayer:
                 )
             result, error = dcraw_proc.communicate()
             if error:
-                log.error("Error Processing Result: " + error)
+                log.error("Error Processing Result: {error}")
 
         # ART or rawtherapee debayer
         elif "rt" in self.engine:
@@ -633,7 +632,7 @@ class Debayer:
             )
             result, error = rt_proc.communicate()
             if error:
-                log.error("Error Processing Result: " + error)
+                log.error("Error Processing Result: {error}")
 
         # darktable debayer
         elif self.engine == "dt":
